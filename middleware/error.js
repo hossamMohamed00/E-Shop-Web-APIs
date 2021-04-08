@@ -7,7 +7,7 @@
 module.exports = (err, req, res) => {
   //* Log the error
   // console.log(err);
-      console.log('Error Here --------------------++-------------------');
+  console.log('Error Here --------------------++-------------------');
 
   //* Send proper message to the user
   res

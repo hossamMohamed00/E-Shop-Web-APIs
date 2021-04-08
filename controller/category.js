@@ -9,7 +9,10 @@ module.exports.createCategory = asyncMiddleware(async (req, res, next) => {
   });
   category = await category.save();
 
-  res.send(category);
+  if (!category)
+    return res.status(500).send('This category cannot be created!');
+
+  res.status(201).send(category);
 });
 
 module.exports.getCategories = asyncMiddleware(async (req, res, next) => {
@@ -21,9 +24,9 @@ module.exports.getSingleCategory = asyncMiddleware(async (req, res, next) => {
   const categoryId = req.params.id;
   const category = await Category.findById(categoryId);
 
-  if (category) return res.json(category);
+  if (category) return res.send(category);
 
-  res.status(404).json({ success: false, message: 'Category not found!' });
+  res.status(404).send({ success: false, message: 'Category not found!' });
 });
 
 module.exports.updateCategory = asyncMiddleware(async (req, res, next) => {
@@ -39,15 +42,16 @@ module.exports.updateCategory = asyncMiddleware(async (req, res, next) => {
     { new: true }
   );
 
-  if(category) return res.json(category);
+  if (category)
+    return res
+      .status(404)
+      .send({ success: false, message: 'Category not found!' });
 
-  res.status(404).json({ success: false, message : 'Category not found!' });
+  return res.send(category);
 });
 
 module.exports.deleteCategory = asyncMiddleware(async (req, res, next) => {
-  const categoryId = req.params.id;
-
-  const category = await Category.findByIdAndRemove(categoryId);
+  const category = await Category.findByIdAndRemove(req.params.id);
 
   if (category)
     return res.send({ success: true, message: 'the category is deleted!' });
