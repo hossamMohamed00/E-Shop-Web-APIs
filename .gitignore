@@ -3,3 +3,5 @@ HTTP_TEST.http
 package-lock.json
 .vscode/
 workspace.code-workspace
+models/orderItem.js
+models/order.js

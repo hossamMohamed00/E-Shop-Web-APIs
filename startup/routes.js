@@ -9,7 +9,7 @@ const product = require('../routes/products');
 const order = require('../routes/orders');
 const category = require('../routes/categories');
 const user = require('../routes/users');
-const errorMiddleware = require('../middleware/error');
+const errorMiddleware = require('../middleware/errorHandler');
 
 module.exports = (app) => {
   app.use(morgan('dev')); //* Logger for the incoming requests.
@@ -22,5 +22,5 @@ module.exports = (app) => {
   app.use(`${apiRoute}/categories`, category);
   app.use(`${apiRoute}/users`, user);
 
-  app.use(errorMiddleware);
-};
+  app.use(errorMiddleware); //* This route for error handling.
+};;

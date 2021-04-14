@@ -160,11 +160,8 @@ const filterColumn = (queryParams) => {
   return selectStatement;
 };
 
-const getLimit = (queryParams) => {
-  let count = queryParams.limit ? parseInt(queryParams.limit) : 0;
-
-  return count;
-};
+const getLimit = (queryParams) =>
+  queryParams.limit ? parseInt(queryParams.limit) : 0;
 
 const categoriesFilter = (queryParams) => {
   let categoriesFilter = {};
