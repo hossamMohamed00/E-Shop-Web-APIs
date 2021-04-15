@@ -3,6 +3,7 @@
  */
 
 const mongoose = require('mongoose');
+const OrderItems = require('./orderItem');
 
 const orderSchema = new mongoose.Schema({
   orderItems: [
@@ -61,6 +62,7 @@ orderSchema.virtual('id').get(function () {
 orderSchema.set('toJSON', {
   virtuals: true
 });
+
 
 const Order = mongoose.model('Order', orderSchema);
 

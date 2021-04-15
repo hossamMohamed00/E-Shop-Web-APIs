@@ -4,9 +4,14 @@ const asyncMiddleware = require('../middleware/async');
 
 module.exports.getOrders = asyncMiddleware(async (req, res, next) => {
   const orderList = await Order.find()
+    .select('orderItems status totalPrice user')
     .populate('user', 'name')
     .sort({ dateOrdered: -1 });
-  res.send(orderList);
+  res.send({
+    success: true,
+    ordersCount: orderList.length,
+    orders: orderList
+  });
 });
 
 module.exports.createOrder = asyncMiddleware(async (req, res, next) => {
@@ -14,6 +19,11 @@ module.exports.createOrder = asyncMiddleware(async (req, res, next) => {
 
   //* Create order item first
   const orderItemsIds = await createOrderItems(requestBody);
+
+  //*Calculate total price
+  const orderTotalPrices = await calculateTotalPrice(orderItemsIds);
+  // Combine all totalPrices
+  const totalPrice = orderTotalPrices.reduce((a, b) => a + b, 0);
 
   let order = new Order({
     orderItems: orderItemsIds,
@@ -24,7 +34,7 @@ module.exports.createOrder = asyncMiddleware(async (req, res, next) => {
     country: requestBody.country,
     phone: requestBody.phone,
     status: requestBody.status,
-    totalPrice: requestBody.totalPrice,
+    totalPrice: totalPrice,
     user: requestBody.user
   });
 
@@ -50,9 +60,92 @@ module.exports.getSingleOrder = asyncMiddleware(async (req, res, next) => {
       }
     });
 
-  if (order) return res.send(order);
+  if (order) return res.send({ success: true, order });
 
   res.status(404).send({ success: false, message: 'Order not found!' });
+});
+
+module.exports.getUserOrders = asyncMiddleware(async (req, res, next) => {
+  const userOrderList = await Order.find({ user: req.params.userid })
+    .select('status totalPrice')
+    .populate({
+      path: 'orderItems',
+      populate: {
+        path: 'product',
+        select: 'name price category',
+        populate: { path: 'category', select: 'name' }
+      }
+    })
+    .sort({ dateOrdered: -1 });
+
+  if (userOrderList.length !== 0) {
+    res.send({
+      success: true,
+      ordersCount: userOrderList.length,
+      orders: userOrderList
+    });
+  } else {
+    res.status(404).send({ success: false, message: 'No Orders found!' });
+  }
+});
+
+module.exports.getTotalSales = asyncMiddleware(async (req, res, next) => {
+  const totalSales = await Order.aggregate([
+    {
+      $group: { _id: null, totalSales: { $sum: '$totalPrice' } }
+    }
+  ]);
+
+  console.log(totalSales);
+  if (!totalSales)
+    return res
+      .status(400)
+      .send({ success: false, message: 'The order sales cannot be generated' });
+
+  return res.send({ success: true, totalSales: totalSales.pop().totalSales });
+});
+
+module.exports.getOrderCount = asyncMiddleware(async (req, res, next) => {
+  const orderCount = await Order.countDocuments((count) => count);
+  if (!orderCount)
+    return res.status(500).send({ success: false, message: 'No order count!' });
+
+  res.send({ success: true, orderCount: orderCount });
+});
+
+module.exports.updateOrderStatus = asyncMiddleware(async (req, res, next) => {
+  let order = await Order.findByIdAndUpdate(
+    req.params.id,
+    {
+      status: req.body.status
+    },
+    { new: true }
+  );
+
+  if (!order)
+    return res
+      .status(404)
+      .send({ success: false, message: 'Order not found!' });
+
+  return res.send(order);
+});
+
+module.exports.deleteOrder = asyncMiddleware(async (req, res, next) => {
+  //? Remove the order
+  const order = await Order.findByIdAndRemove({ _id: req.params.id });
+
+  //? Remove order items also
+  if (order) {
+    await order.orderItems.map(async (orderItem) => {
+      await OrderItem.findByIdAndRemove(orderItem);
+    });
+
+    return res.send({ success: true, message: 'the order is deleted!' });
+  } else {
+    return res
+      .status(404)
+      .send({ success: false, message: 'No order with that id exists!' });
+  }
 });
 
 //* Helper functions *//
@@ -73,4 +166,21 @@ const createOrderItems = async (requestBody) => {
   );
 
   return orderItemsIds;
+};
+
+const calculateTotalPrice = async (orderItemsIds) => {
+  const orderTotalPrice = Promise.all(
+    orderItemsIds.map(async (orderItemId) => {
+      const orderItem = await OrderItem.findById(orderItemId).populate(
+        'product',
+        'price'
+      );
+
+      const totalPrice = orderItem.product.price * orderItem.quantity;
+
+      return totalPrice;
+    })
+  );
+
+  return orderTotalPrice;
 };
