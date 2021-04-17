@@ -1,5 +1,6 @@
 node_modules
 HTTP_TEST.http
 package-lock.json
-.vscode/
+.vscode
 workspace.code-workspace
+.env

@@ -4,16 +4,16 @@
  */
 
 module.exports = (handler) => {
-  //Todo: We must return regular express route handler
-  return async (req, res, next) => {
-    try {
-      //* Run the handler function
-      await handler(req, res, next);
-    } catch (error) {
-      console.log(error);
-      res
-        .status(500)
-        .json({ success: false, message: 'An error occurred!', error});
-    }
-  };
+	//Todo: We must return regular express route handler
+	return async (req, res, next) => {
+		try {
+			//* Run the handler function
+			await handler(req, res, next);
+		} catch (error) {
+			console.log(error);
+			res
+				.status(500)
+				.json({ success: false, message: 'An error occurred!', error});
+		}
+	};
 };

@@ -2,171 +2,220 @@ const Product = require('../models/product');
 const Category = require('../models/category');
 const asyncMiddleware = require('../middleware/async');
 
-module.exports.createProduct = asyncMiddleware(async (req, res, next) => {
-  const bodyData = req.body;
+module.exports.createProduct = asyncMiddleware(async (req, res, ) => {
+	const bodyData = req.body;
 
-  //? validate the category id
-  const category = await Category.findById(bodyData.category);
+	//? validate the category id
+	const category = await Category.findById(bodyData.category);
 
-  if (!category)
-    return res
-      .status(400)
-      .send({ success: false, message: 'Invalid category id!' });
+	if (!category)
+		return res
+			.status(400)
+			.send({ success: false, message: 'Invalid category id!' });
 
-  let product = new Product({
-    name: bodyData.name,
-    description: bodyData.description,
-    richDescription: bodyData.richDescription,
-    image: bodyData.image,
-    brand: bodyData.brand,
-    price: bodyData.price,
-    category: bodyData.category,
-    countInStock: bodyData.countInStock,
-    rating: bodyData.rating,
-    numReviews: bodyData.numReviews,
-    isFeatured: bodyData.isFeatured
-  });
+	//? validate the product image
+	const file = req.file;
+	if (!file)
+		return res
+			.status(400)
+			.send({ success: false, message: 'You must upload product image!' });
 
-  product = await product.save();
+	let product = new Product({
+		name: bodyData.name,
+		description: bodyData.description,
+		richDescription: bodyData.richDescription,
+		image: file.filenameOnDB,
+		brand: bodyData.brand,
+		price: bodyData.price,
+		category: bodyData.category,
+		countInStock: bodyData.countInStock,
+		rating: bodyData.rating,
+		numReviews: bodyData.numReviews,
+		isFeatured: bodyData.isFeatured
+	});
 
-  if (!product)
-    return res
-      .status(500)
-      .send({ success: false, message: 'This product cannot be created!' });
+	product = await product.save();
 
-  //* If all is ok, inform the user
-  res.status(201).json(product);
+	if (!product)
+		return res
+			.status(500)
+			.send({ success: false, message: 'This product cannot be created!' });
+
+	//* If all is ok, inform the user
+	res.status(201).json(product);
 });
 
-module.exports.getProducts = asyncMiddleware(async (req, res, next) => {
-  //? Filter the column to return
-  const selectStatement = filterColumn(req.query);
+module.exports.getProducts = asyncMiddleware(async (req, res, ) => {
+	//? Filter the column to return
+	const selectStatement = filterColumn(req.query);
 
-  //? Filter by the categories
-  const filter = categoriesFilter(req.query);
+	//? Filter by the categories
+	const filter = categoriesFilter(req.query);
 
-  //? Find the products
-  const productList = await Product.find(filter)
-    .select(selectStatement)
-    .populate('category');
+	//? Find the products
+	const productList = await Product.find(filter)
+		.select(selectStatement)
+		.populate('category');
 
-  res.send(productList);
+	res.send(productList);
 });
 
-module.exports.getSingleProduct = asyncMiddleware(async (req, res, next) => {
-  //? Filter the column to return
-  let selectStatement = filterColumn(req.query);
-  const product = await Product.findById(req.params.id)
-    .select(selectStatement)
-    .populate('category');
+module.exports.getSingleProduct = asyncMiddleware(async (req, res, ) => {
+	//? Filter the column to return
+	let selectStatement = filterColumn(req.query);
+	const product = await Product.findById(req.params.id)
+		.select(selectStatement)
+		.populate('category');
 
-  if (!product)
-    res.status(404).json({ success: false, message: 'Product not found!' });
+	if (!product)
+		res.status(404).json({ success: false, message: 'Product not found!' });
 
-  return res.send(product);
+	return res.send(product);
 });
 
-module.exports.getProductCount = asyncMiddleware(async (req, res, next) => {
-  const productCount = await Product.countDocuments((count) => count);
-  if (!productCount)
-    return res
-      .status(500)
-      .send({ success: false, message: 'No products count!' });
+module.exports.getProductCount = asyncMiddleware(async (req, res, ) => {
+	const productCount = await Product.countDocuments((count) => count);
+	if (!productCount)
+		return res
+			.status(500)
+			.send({ success: false, message: 'No products count!' });
 
-  res.send({ productCount });
+	res.send({ productCount });
 });
 
-module.exports.getFeaturedProducts = asyncMiddleware(async (req, res, next) => {
-  //? Filter the column to return
-  const selectStatement = filterColumn(req.query);
+module.exports.getFeaturedProducts = asyncMiddleware(async (req, res, ) => {
+	//? Filter the column to return
+	const selectStatement = filterColumn(req.query);
 
-  //? Check for limit
-  const limit = getLimit(req.query);
+	//? Check for limit
+	const limit = getLimit(req.query);
 
-  //* Find the products
-  const productList = await Product.find({ isFeatured: true })
-    .limit(limit)
-    .select(selectStatement);
+	//* Find the products
+	const productList = await Product.find({ isFeatured: true })
+		.limit(limit)
+		.select(selectStatement);
 
-  if (!productList)
-    return res
-      .status(404)
-      .json({ success: false, message: 'No Featured Products' });
+	if (!productList)
+		return res
+			.status(404)
+			.json({ success: false, message: 'No Featured Products' });
 
-  res.send(productList);
+	res.send(productList);
 });
 
-module.exports.updateProduct = asyncMiddleware(async (req, res, next) => {
-  const bodyData = req.body;
-  //? validate the category id
-  const category = await Category.findById(bodyData.category);
+module.exports.updateProduct = asyncMiddleware(async (req, res, ) => {
+	const bodyData = req.body;
+	//? validate the category id
+	const category = await Category.findById(bodyData.category);
 
-  if (!category)
-    return res
-      .status(400)
-      .send({ success: false, message: 'Invalid category id!' });
+	if (!category)
+		return res
+			.status(400)
+			.send({ success: false, message: 'Invalid category id!' });
 
-  //* Update the product
-  const product = await Product.findByIdAndUpdate(
-    req.params.id,
-    {
-      name: bodyData.name,
-      description: bodyData.description,
-      richDescription: bodyData.richDescription,
-      image: bodyData.image,
-      brand: bodyData.brand,
-      price: bodyData.price,
-      category: bodyData.category,
-      countInStock: bodyData.countInStock,
-      rating: bodyData.rating,
-      numReviews: bodyData.numReviews,
-      isFeatured: bodyData.isFeatured
-    },
-    { new: true }
-  );
+	//? validate the product image
+	const file = req.file;
+	if (!file)
+		return res
+			.status(400)
+			.send({ success: false, message: 'You must upload product image!' });
 
-  if (!product)
-    return res
-      .status(404)
-      .send({ success: false, message: 'Product not found!' });
+	//* Update the product
+	const product = await Product.findByIdAndUpdate(
+		req.params.id,
+		{
+			name: bodyData.name,
+			description: bodyData.description,
+			richDescription: bodyData.richDescription,
+			image: file.filenameOnDB,
+			brand: bodyData.brand,
+			price: bodyData.price,
+			category: bodyData.category,
+			countInStock: bodyData.countInStock,
+			rating: bodyData.rating,
+			numReviews: bodyData.numReviews,
+			isFeatured: bodyData.isFeatured
+		},
+		{ new: true }
+	);
 
-  return res.send(product);
+	if (!product)
+		return res
+			.status(404)
+			.send({ success: false, message: 'Product not found!' });
+
+	return res.send(product);
 });
 
-module.exports.deleteProduct = asyncMiddleware(async (req, res, next) => {
-  const product = await Product.findByIdAndRemove(req.params.id);
+module.exports.uploadGalleryImages = asyncMiddleware(async (req, res, ) => {
+	//* Get the images paths
+	let imagePaths = [];
+	const files = req.files;
 
-  if (!product)
-    return res
-      .status(404)
-      .send({ success: false, message: 'No product with that id exists!' });
+	if (files) {
+		files.map((file) => {
+			imagePaths.push(file.filenameOnDB);
+		});
+	} else {
+		return res
+			.status(400)
+			.send({ success: false, message: 'You must upload product image!' });
+	}
 
-  return res.send({ success: true, message: 'The product is deleted!' });
+	//* Update the product
+	const product = await Product.findByIdAndUpdate(
+		req.params.id,
+		{
+			images: imagePaths
+		},
+		{ new: true }
+	);
+
+	if (!product)
+		return res
+			.status(404)
+			.send({ success: false, message: 'Product not found!' });
+
+	return res.send({
+		success: true,
+		message: 'Product Gallery Images successfully uploaded!'
+	});
+});
+
+module.exports.deleteProduct = asyncMiddleware(async (req, res, ) => {
+	const product = await Product.findByIdAndRemove(req.params.id);
+
+	if (!product)
+		return res
+			.status(404)
+			.send({ success: false, message: 'No product with that id exists!' });
+
+	return res.send({ success: true, message: 'The product is deleted!' });
 });
 
 /*------Helper functions----------*/
 
 const filterColumn = (queryParams) => {
-  let selectStatement = '';
+	let selectStatement = '';
 
-  if (queryParams.returnOnly) {
-    let params = queryParams.returnOnly;
-    params = params.split(',');
-    params.forEach((param) => {
-      selectStatement += `${param} `;
-    });
-  }
+	if (queryParams.returnOnly) {
+		let params = queryParams.returnOnly;
+		params = params.split(',');
+		params.forEach((param) => {
+			selectStatement += `${param} `;
+		});
+	}
 
-  return selectStatement;
+	return selectStatement;
 };
 
 const getLimit = (queryParams) =>
-  queryParams.limit ? parseInt(queryParams.limit) : 0;
+	queryParams.limit ? parseInt(queryParams.limit) : 0;
 
 const categoriesFilter = (queryParams) => {
-  let categoriesFilter = {};
-  if (queryParams.categories) {
-    categoriesFilter = { category: queryParams.categories.split(',') };
-  }
-  return categoriesFilter;
+	let categoriesFilter = {};
+	if (queryParams.categories) {
+		categoriesFilter = { category: queryParams.categories.split(',') };
+	}
+	return categoriesFilter;
 };
