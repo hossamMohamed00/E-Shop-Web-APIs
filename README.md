@@ -2,7 +2,8 @@
 
 ## Description
 
-E-Commerce web applicaiton provide all APIs needed for any E-shop application.
+- E-Commerce web applicaiton provide all APIs needed for any E-shop application. 👩🏻‍💻❤
+- I deployed it on heroku, use postman to check it 🤗  https://hossam-e-shop.herokuapp.com/
 
 ## Getting Started
 
